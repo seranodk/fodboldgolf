@@ -42,6 +42,15 @@
   #end .box button+button{margin-left:6px;background:#506a45}
   .holeGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
   .holeGrid button{padding:8px 0;font-size:12.5px}
+  #main{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:flex-start;overflow:auto;padding:28px 18px 24px;box-sizing:border-box;background:linear-gradient(#1c4a16,#2f7d22 55%,#1c4a16);color:#fff}
+  #main h1{margin:10px 0 2px;font-size:34px;letter-spacing:.5px}
+  #main .sub{opacity:.8;font-size:14px;margin-bottom:18px}
+  #main .cc{width:min(100%,420px);display:flex;align-items:center;gap:12px;text-align:left;background:rgba(0,0,0,.28);border-radius:16px;padding:12px 14px;margin:6px 0;font-size:15px;border:1px solid rgba(255,255,255,.12)}
+  #main .cc:active{background:rgba(0,0,0,.45)}
+  #main .sw{flex:none;width:46px;height:46px;border-radius:12px;box-shadow:inset 0 0 0 3px rgba(255,255,255,.35)}
+  #main .cc b{display:block;font-size:17px}#main .cc small{opacity:.8;font-size:12.5px;font-weight:500}
+  #main .go{margin-left:auto;font-size:13px;background:#fff;color:#1d3a14;border-radius:10px;padding:7px 11px}
+  #main a{color:#fff;opacity:.8;font-size:13px;margin-top:16px;text-decoration:underline}
   #settings h3{margin:0 0 6px;font-size:19px}
   #settings .row{margin:12px 0}
   #settings .lbl{font-size:12px;opacity:.7;margin-bottom:6px}
@@ -58,6 +67,7 @@
 </div>
 <button id="bMenu">☰</button>
 <div id="btns">
+  <button id="bMain">Hovedmenu</button>
   <button id="bSet">⚙ Indstillinger</button>
   <button id="bLob">Lob</button>
   <button id="bSnd">🔊 Lyd</button>
@@ -65,6 +75,7 @@
   <button id="bRe">Forfra</button>
 </div>
 <div class="card" id="windCard"><span id="wArrow">➤</span><span id="wTxt"></span></div>
+<div id="main"><h1>⚽ Fodboldgolf</h1><div class="sub">Vælg en bane</div><div id="courseList"></div><a href="https://seranodk.github.io/">← Tilbage til spillehallen</a></div>
 <div id="settings"><div class="box"><h3>Indstillinger <small id="ver" style="font-weight:400;opacity:.5;font-size:12px"></small></h3>
   <div class="row"><div class="lbl">Vind (styrke og retning er tilfældig på hvert hul)</div><div class="seg"><button id="wTog"></button></div></div>
   <div class="row"><div class="lbl">Hældning (pile viser hvor bolden ruller hen)</div><div class="seg"><button id="slBtn"></button></div></div>
@@ -79,7 +90,7 @@
 <div id="card"><div class="box"><h3 style="margin:0 0 8px" id="cardTitle">Pointkort</h3><div id="cardBody"></div><button id="cardClose">Luk</button><button id="cardNew" style="display:none">Ny runde</button><button id="cardNext" style="display:none">Næste bane</button></div></div>
 <script>
 'use strict';
-const VERSION='1.0';
+const VERSION='1.1';
 //<PHYS>
 let W=600,H=1800;const G=900,BR=7;
 let HOLE={x:400,y:170,r:14},TEE={x:300,y:1700},FW=[[300,1700],[300,200]],FWW=78,GREEN={x:400,y:190,r:78};
@@ -692,6 +703,17 @@ function showCard(fin){
 $('bCard').onclick=()=>{$('settings').style.display='none';showCard()};
 $('eC').onclick=()=>showCard(curHole===17);
 $('cardClose').onclick=()=>{$('card').style.display='none'};
+function openMain(){
+  const L=$('courseList');L.innerHTML='';
+  COURSES.forEach((c,k)=>{const sc=allScores[k],n=sc.filter(v=>v!=null).length,tp=sc.reduce((a,v,i)=>v!=null?a+v-c.holes[i].par:a,0),pars=c.holes.reduce((a,h)=>a+h.par,0);
+    const b=document.createElement('button');b.className='cc';
+    b.innerHTML='<span class="sw" style="background:linear-gradient('+c.th.fw+','+c.th.rough+')"></span><span><b>'+c.name+'</b><small>18 huller · par '+pars+(n?' · '+n+'/18 spillet'+(n===18?' · '+(bests[k]?'bedste '+bests[k]:'færdig'):' · '+fmtPar(tp)):'')+'</small></span><span class="go">'+(n===18?'Spil igen':n?'Fortsæt':'Start')+'</span>';
+    b.onclick=()=>{$('main').style.display='none';if(n===18){allScores[k]=Array(18).fill(null)}
+      let h=0;if(n&&n<18){h=allScores[k].findIndex(v=>v==null)}setCourse(k,h)};
+    L.appendChild(b)});
+  $('main').style.display='flex';
+}
+$('bMain').onclick=openMain;
 function newRound(){allScores[curCourse]=Array(18).fill(null);scores=allScores[curCourse];$('card').style.display='none';$('end').style.display='none';$('settings').style.display='none';startHole(0)}
 $('cardNext').onclick=()=>{$('card').style.display='none';$('end').style.display='none';setCourse(curCourse+1,0)};
 $('cardNew').onclick=newRound;$('bNewRound').onclick=newRound;
@@ -829,7 +851,7 @@ function frame(ts){
   requestAnimationFrame(frame);
 }
 window.addEventListener('resize',()=>{resize();camY=targetCamY()});
-resize();setCourse(savedCourse,savedCur);requestAnimationFrame(frame);
+resize();setCourse(savedCourse,savedCur);openMain();requestAnimationFrame(frame);
 </script>
 </body>
 </html>
