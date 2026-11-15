@@ -78,7 +78,7 @@
 <div id="card"><div class="box"><h3 style="margin:0 0 8px">Pointkort</h3><div id="cardBody"></div><button id="cardClose">Luk</button><button id="cardNew" style="display:none">Ny runde</button></div></div>
 <script>
 'use strict';
-const VERSION='0.9';
+const VERSION='0.10';
 //<PHYS>
 let W=600,H=1800;const G=900,BR=7;
 let HOLE={x:400,y:170,r:14},TEE={x:300,y:1700},FW=[[300,1700],[300,200]],FWW=78,GREEN={x:400,y:190,r:78};
@@ -368,7 +368,7 @@ function resize(){
   scale=Math.min(cw/W,ch/820);camX=(W-cw/scale)/2;
 }
 function viewH(){return ch/scale}
-function targetCamY(){return Math.max(0,Math.min(H-viewH(),ball.y-viewH()*.66))}
+function targetCamY(){const top=-110/scale;return Math.max(top,Math.min(H-viewH(),ball.y-viewH()*.62))}
 
 // ---------- statisk bane (tegnes én gang) ----------
 const SL=2,st=document.createElement('canvas');
@@ -751,7 +751,7 @@ function frame(ts){
   }else if(state==='sink'){sink.t+=dt;const k=Math.min(1,sink.t/.4),e=1-(1-k)*(1-k);ball.x=sink.x0+(HOLE.x-sink.x0)*e;ball.y=sink.y0+(HOLE.y-sink.y0)*e;ball.z=0;if(sink.t>.55)finish();
   }else if(state==='wet'){wetT-=dt;if(wetT<=0){ball={x:last.x,y:last.y,z:0,vx:0,vy:0,vz:0,spin:0};strokes++;state='aim';hud()}}
   // kamera
-  if(introT>0){introT-=dt;const k=Math.max(0,Math.min(1,(2.4-introT-.6)/1.7)),e=k*k*(3-2*k);camY=Math.max(0,HOLE.y-viewH()*.4)*(1-e)+targetCamY()*e;if(drag)introT=0}
+  if(introT>0){introT-=dt;const k=Math.max(0,Math.min(1,(2.4-introT-.6)/1.7)),e=k*k*(3-2*k);camY=Math.max(-110/scale,HOLE.y-viewH()*.4)*(1-e)+targetCamY()*e;if(drag)introT=0}
   else if(!drag){const ty=targetCamY();camY+=(ty-camY)*Math.min(1,dt*(state==='fly'?5:3.5))}
   let s=scale,ox=camX,oy=camY;
   if(overview){s=Math.min(cw/W,ch/H);ox=(W-cw/s)/2;oy=(H-ch/s)/2}
