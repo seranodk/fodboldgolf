@@ -45,6 +45,7 @@
   #main{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:flex-start;overflow:auto;padding:28px 18px 24px;box-sizing:border-box;background:linear-gradient(#1c4a16,#2f7d22 55%,#1c4a16);color:#fff}
   #main h1{margin:10px 0 2px;font-size:34px;letter-spacing:.5px}
   #main .sub{opacity:.8;font-size:14px;margin-bottom:18px}
+  #courseList{display:flex;flex-direction:column;align-items:center;width:100%}
   #main .cc{width:min(100%,420px);display:flex;align-items:center;gap:12px;text-align:left;background:rgba(0,0,0,.28);border-radius:16px;padding:12px 14px;margin:6px 0;font-size:15px;border:1px solid rgba(255,255,255,.12)}
   #main .cc:active{background:rgba(0,0,0,.45)}
   #main .sw{flex:none;width:46px;height:46px;border-radius:12px;box-shadow:inset 0 0 0 3px rgba(255,255,255,.35)}
@@ -90,7 +91,7 @@
 <div id="card"><div class="box"><h3 style="margin:0 0 8px" id="cardTitle">Pointkort</h3><div id="cardBody"></div><button id="cardClose">Luk</button><button id="cardNew" style="display:none">Ny runde</button><button id="cardNext" style="display:none">Næste bane</button></div></div>
 <script>
 'use strict';
-const VERSION='1.1';
+const VERSION='1.2';
 //<PHYS>
 let W=600,H=1800;const G=900,BR=7;
 let HOLE={x:400,y:170,r:14},TEE={x:300,y:1700},FW=[[300,1700],[300,200]],FWW=78,GREEN={x:400,y:190,r:78};
@@ -237,13 +238,15 @@ const THEMES={
  strand:{rough:'#98a652',fw:'#7cbd55',fwEdge:'rgba(120,160,70,.9)',stripe:'rgba(190,235,120,.33)',green:'#8fd860',sand:'#f2deA2',rim:'#8f9a4a',w1:'#62d0e6',w2:'#1f95bf',border:'#7a8a40',tree:['#4d6b2b','#5f8334','#729a3e','#88b04b','#a8cc62']},
  skov:{rough:'#255220',fw:'#4a8f35',fwEdge:'rgba(40,100,35,.9)',stripe:'rgba(120,200,80,.28)',green:'#60b844',sand:'#cdbd85',rim:'#2d5a24',w1:'#4a96a8',w2:'#1d4f6b',border:'#10330f',tree:['#123a16','#1a4e1f','#216028','#2c7a34','#45a042']},
  hoj:{rough:'#788a38',fw:'#8cb044',fwEdge:'rgba(110,140,50,.9)',stripe:'rgba(200,225,110,.3)',green:'#9ed450',sand:'#e8d09a',rim:'#6d7f35',w1:'#55a0c6',w2:'#27607f',border:'#4d5a24',tree:['#9a3f12','#b85a14','#d07a1c','#e29a2a','#f2c458']},
+ vinter:{rough:'#aebfc2',fw:'#cfe2e0',fwEdge:'rgba(150,180,185,.9)',stripe:'rgba(255,255,255,.35)',green:'#e6f3f1',sand:'#cdbb9c',rim:'#8da0a4',w1:'#a6dcf0',w2:'#4a8fb8',border:'#7e949a',tree:['#18382f','#22504a','#2c665b','#4c887b','#e2f0ef']},
+ orken:{rough:'#c9a45e',fw:'#a8b94d',fwEdge:'rgba(150,150,60,.9)',stripe:'rgba(220,230,130,.3)',green:'#b8dc5c',sand:'#f2d38e',rim:'#a8823a',w1:'#4cc4cc',w2:'#1d7f94',border:'#8d6a2a',tree:['#5a6b2a','#6f8434','#8aa040','#a7bd4e','#c4d46a']},
  slot:{rough:'#418c3a',fw:'#6cc048',fwEdge:'rgba(80,160,55,.9)',stripe:'rgba(170,240,120,.36)',green:'#8be05c',sand:'#f0e2b4',rim:'#4a8a35',w1:'#52b4e4',w2:'#2468a8',border:'#2a5f22',tree:['#1d6a2a','#26822f','#34a03c','#4ab94a','#72d060']}
 };
 let TH=THEMES.park;
 function genHole(sp,seed,st){
   const rr=rnd(Math.floor((seed*2654435761)%2147483629)+7),R=(a,b)=>a+rr()*(b-a);for(let q=0;q<8;q++)rr();const _x=0,par=sp.par,cl=x=>Math.max(150,Math.min(450,Math.round(x)));
-  const vert=Math.round(par===3?R(520,1000):par===4?R(1100,1600):R(1900,2350));
-  const tx=Math.round(R(220,380)),fww=Math.round(R(st.fw[0],st.fw[0]+st.fw[1])),gr=Math.round(R(60,76)),sgn=rr()<.5?-1:1;
+  const vert=Math.round((par===3?R(520,1000):par===4?R(1100,1600):R(1900,2350))*(st.vs||1));
+  const tx=Math.round(R(220,380)),fww=Math.round(R(st.fw[0],st.fw[0]+st.fw[1])),gr=Math.round(R(...(st.gr||[60,76]))),sgn=rr()<.5?-1:1;
   const shape=sp.shape||(par===3?(rr()<.6?'s':'d'):['d','d','z','s'][rr()*4|0]);
   let fw,gx;
   if(shape==='s'){gx=cl(tx+R(-60,60));fw=[[tx,0],[tx,.5],[gx,1]]}
@@ -252,20 +255,23 @@ function genHole(sp,seed,st){
   const xAt=t=>{for(let k=0;k<fw.length-1;k++){const a=fw[k],b=fw[k+1];if(t<=b[1])return a[0]+(b[0]-a[0])*Math.max(0,(t-a[1])/(b[1]-a[1]))}return gx};
   const d={n:sp.n,par,vert,tx,fww,gr,fw,bunk:[],mounds:[],trees:[],water:[],hedges:[],logs:[],walls:[],forest:st.forest,fex:st.fex},used=[];
   const pick=(a,b,gap)=>{let t=R(a,b);for(let n=0;n<8&&used.some(u=>Math.abs(u-t)<(gap||.1));n++)t=R(a,b);used.push(t);return t};
+  const clr=(t,rx,ry,off,sd)=>{for(let n=0;n<30;n++){let bad=false;for(let tt=t-ry/vert-.03;tt<=t+ry/vert+.03;tt+=.01){const cx=xAt(Math.max(0,Math.min(1,tt)))-(xAt(t)+sd*off),dy=(tt-t)*vert;if((cx*cx)/((rx+10)*(rx+10))+(dy*dy)/((ry+10)*(ry+10))<1){bad=true;break}}if(!bad)return off;off+=12}return off};
   const toward=t=>xAt(t)>300?-1:xAt(t)<300?1:sgn;
   for(const k of sp.f){
     if(k==='g'){const o=gr+16;d.bunk.push([gx-o,.95,R(26,36),R(20,28)],[gx+o,.94,R(26,36),R(20,28)])}
     else if(k==='g1'){d.bunk.push([gx+sgn*(gr+16),.95,34,26])}
     else if(k==='B'){const t=pick(.28,.62),s=rr()<.5?-1:1,rx=R(28,40);d.bunk.push([xAt(t)+s*(fww*.75+rx*.4),t,rx,R(22,30)])}
     else if(k==='c'){const t=pick(.62,.78);d.bunk.push([xAt(t),t,fww*.85,20])}
-    else if(k==='p'||k==='w'){const rx=R(85,118),ry=R(55,78);let t=k==='p'?pick(.42,.58):pick(.74,.84);t=Math.min(t,.88-ry/vert);t=Math.max(t,.2+ry/vert);d.water.push([xAt(t)+toward(t)*(rx+fww*.15),t,rx,ry])}
+    else if(k==='p'||k==='w'){const rx=R(85,118),ry=R(55,78);let t=k==='p'?pick(.42,.58):pick(.74,.84);t=Math.min(t,.88-ry/vert);t=Math.max(t,.2+ry/vert);const sd=toward(t);let off=rx+fww*.15;d.water.push([xAt(t)+sd*clr(t,rx,ry,off,sd),t,rx,ry])}
+    else if(k==='P'){const rx=R(80,110),ry=R(55,75);let t=pick(.42,.58);t=Math.min(t,.88-ry/vert);t=Math.max(t,.2+ry/vert);for(const sd of[-1,1])d.water.push([xAt(t)+sd*clr(t,rx,ry,rx+fww*.6,sd),t,rx,ry])}
+    else if(k==='G'){const o=gr+16;d.bunk.push([gx-o,.95,R(28,36),R(22,28)],[gx+o,.94,R(28,36),R(22,28)],[gx,.86,R(26,34),R(20,26)])}
     else if(k==='r'){const t=pick(.4,.55,.15);d.river=[t,R(6,16),cl(xAt(t)+R(-50,50)),R(22,28)]}
     else if(k==='i'){d.gr=56;d.ring=[gx,.977,125,44,70]}
     else if(k==='h'){const t=pick(.5,.7);d.hedges.push([Math.max(40,xAt(t)-fww*1.7),Math.min(560,xAt(t)+fww*1.7),t,Math.round(xAt(t)+R(-40,40))])}
     else if(k==='H'||k==='m'){const t=pick(.5,.72),s=toward(t)*-1,x=xAt(t),a=s>0?x-fww*1.6:x-fww*.2,b=s>0?x+fww*.2:x+fww*1.6;
       (k==='H'?d.hedges:d.walls).push(k==='H'?[Math.max(30,a),Math.min(570,b),t,null]:[Math.max(30,a),Math.min(570,b),t])}
     else if(k==='l'){const t=pick(.3,.7);d.logs.push([xAt(t)-80,xAt(t)+80,t])}
-    else if(k==='u'){for(let n=0;n<2;n++){const t=R(.25,.85);d.mounds.push([xAt(t)+R(-1,1)*fww*.8,t,R(34,50),(rr()<.5?-1:1)*R(.4,.8)])}}
+    else if(k==='u'){for(let n=0;n<2;n++){const t=R(.25,.85);d.mounds.push([xAt(t)+R(-1,1)*fww*.8,t,R(34,50),(rr()<.5?-1:1)*R(.4,.8)*(st.ma||1)])}}
   }
   if(!sp.f.includes('i')&&!d.bunk.some(b=>b[1]>.9))d.mounds.push([gx+R(-30,30),.98,R(28,38),R(.35,.55)]);
   else d.mounds.push([gx+R(-20,20),.98,R(28,38),R(.35,.5)]);
@@ -273,14 +279,25 @@ function genHole(sp,seed,st){
   return d;
 }
 function mkCourse(name,th,st,seed,rows){return{name,th:THEMES[th],holes:rows.map((r,i)=>{const [n,par,f]=r.split('|');return genHole({n,par:+par,f:f?f.split(' '):[]},seed+i*31,st)})}}
+const HP=[3,4,4,5,3,4,5,3,4,4,5,3,4,3,5,4,3,4];
+function hardRows(seed,names,pool){const rr=rnd(seed*7+3);for(let q=0;q<8;q++)rr();const nm=names.split(',');
+  return HP.map((par,i)=>{const n=par===3?3:par===4?4:5,f=[];
+    if(par===3&&rr()<.22){f.push('i','u','B')}
+    else{const pl=par===3?pool.filter(k=>k!=='r'):pool;for(let k=0;k<n;k++)f.push(pl[rr()*pl.length|0]);f.push(rr()<.6?'G':'g');f.push('u')}
+    return nm[i]+'|'+par+'|'+f.join(' ')})}
 const COURSES=[
  {name:'Parken',th:THEMES.park,holes:PARK},
  mkCourse('Stranden','strand',{fw:[84,26],forest:.07},1100,['Dyneopgangen|3|g u','Sandfælden|4|B B g u','Havblik|3|w g','Klitrækken|5|B u u B c g','Strandvejen|4|p B g','Muslingeskallen|3|g1 B u','Højvande|4|r g u','Fyrtårnet|5|B c w g u','Vandrehul|4|B u g','Saltvandsbugten|3|i','Dynerne|5|u u B B g','Vragstedet|4|l B g','Stenstranden|3|m g','Krabbefælden|4|c B g u','Lagunen|4|p w g','Pælebroen|5|r B B g u','Vindstille|3|B g u','Solnedgang|4|p B g u']),
  mkCourse('Skovbanen','skov',{fw:[50,16],forest:.9,fex:22},2200,['Skovbrynet|3|g l','Stien|4|l g u','Mosen|3|p g','Granerne|5|l B l g u','Bækken|4|r g','Lysningen|3|g1 u','Væltede træer|4|l l g','Slugten|5|u u l p g','Egeskoven|4|B g u','Vildtbanen|3|H g','Kratstien|5|l r B g','Rævegraven|3|g u','Mørke Mose|4|p l g','Hulvejen|4|u u g','Stammen|3|l g','Elledammen|4|p g u','Skovtårnet|5|l B u g l','Udgangen|4|r g u']),
  mkCourse('Højlandet','hoj',{fw:[70,24],forest:.4},3300,['Hedebakken|3|u u g','Stengærdet|4|m u g','Kløften|3|u p g','Højderyggen|5|u u u B g m','Klippen|4|u B g u','Mosehullet|3|g1 u u','Tårnet|4|m u g','Dalen|5|u r u g B','Bjergsøen|4|p u g','Skråningen|3|u u g','Kammen|5|u u m B u g','Gruset|3|B g u','Fårefolden|4|m m g','Tåget|4|u B g u','Stenbruddet|3|m g','Ørnerede|5|u B u c g','Nedkørslen|3|i u','Toppen|4|u u g p']),
- mkCourse('Slotsparken','slot',{fw:[64,20],forest:.22},4400,['Indkørslen|3|H g','Rosenhaven|4|h h g','Voldgraven|3|i','Alléen|5|h B h g u','Springvandet|3|p g','Labyrinten|4|H H g','Slotsbroen|4|r g h','Orangeriet|5|m h B g','Stalden|4|h B g u','Dammen|3|w g','Herregårdsstien|5|r h B m g','Muren|3|m g','Teateret|4|H B g','Vindebroen|4|r h g','Fasanhaven|3|h g1','Parkeringen|5|h m B c g','Fontænen|3|p g B','Finalen på slottet|4|r h g u'])
+ mkCourse('Slotsparken','slot',{fw:[64,20],forest:.22},4400,['Indkørslen|3|H g','Rosenhaven|4|h h g','Voldgraven|3|i','Alléen|5|h B h g u','Springvandet|3|p g','Labyrinten|4|H H g','Slotsbroen|4|r g h','Orangeriet|5|m h B g','Stalden|4|h B g u','Dammen|3|w g','Herregårdsstien|5|r h B m g','Muren|3|m g','Teateret|4|H B g','Vindebroen|4|r h g','Fasanhaven|3|h g1','Parkeringen|5|h m B c g','Fontænen|3|p g B','Finalen på slottet|4|r h g u']),
+ mkCourse('Mesterskabet','park',{fw:[38,14],forest:.8,fex:18,gr:[44,56],vs:1.12,ma:1.4},5500,hardRows(5500,'Åbningen,Hækkelabyrinten,Vandspejlet,Kongestien,Stålsøen,Murbrækkeren,Dronningens vej,Pælehullet,Skakbrættet,Nåleøjet,Guldstien,Taarnet,Slagmarken,Slangen,Dommedag,Hvidt flag,Sidste chance,Mesterhullet',['h','H','m','B','c','p','P','l','r','w'])),
+ mkCourse('Linksbanen','strand',{fw:[40,16],forest:.12,gr:[44,56],vs:1.15,ma:1.5},6600,hardRows(6600,'Vindens hul,Havgusen,Klitpasset,Sandstormen,Skumtoppen,Saltstien,Vragfeltet,Ebbe og flod,Ulvetanden,Tangen,Stormfloden,Brænding,Fyrvogteren,Dødvandet,Kystvejen,Skibbrud,Havørnen,Storm',['B','B','c','c','w','p','P','m','l','r','u'])),
+ mkCourse('Mørkeskoven','skov',{fw:[34,12],forest:.97,fex:16,gr:[44,54],vs:1.1,ma:1.3},7700,hardRows(7700,'Ulveskoven,Troldestien,Kraternes sump,Hulderhullet,Hekseringen,Mosehulen,Ravnesten,Tågekløften,Dødningeskoven,Den sorte sø,Rødder,Vildnisset,Edderkoppen,Kvælerstien,Mørkets hjerte,Brændt jord,Sidste lys,Udvejen',['l','l','H','B','p','P','r','m','w'])),
+ mkCourse('Vinterbanen','vinter',{fw:[38,14],forest:.6,fex:18,gr:[44,56],vs:1.12,ma:1.5},8800,hardRows(8800,'Rimfrost,Isbrækkeren,Snefog,Frosne sø,Gletsjeren,Is-slugten,Nordlyset,Snedriven,Polarstien,Hvid ørken,Isdammen,Slæderuten,Frostbid,Kuldegrader,Iglo,Vinterstorm,Tøbrud,Nul grader',['p','P','w','w','B','c','m','l','r','H'])),
+ mkCourse('Ørkenen','orken',{fw:[40,16],forest:.1,gr:[44,56],vs:1.15,ma:1.6},9900,hardRows(9900,'Oasen,Karavanen,Sandsejlet,Fatamorgana,Tørkens sti,Kamelryggen,Solbagt,Klippekløften,Saharas hjerte,Støvstormen,Skorpionen,Mirage,Dødsdalen,Varmebølgen,Tørstig,Sandvejen,Karavanserai,Solnedgang',['B','B','B','c','c','m','H','w','p','P','u']))
 ];
-let curCourse=0,HOLES=PARK;
+let curCourse=0,HOLES=PARK;COURSES.forEach((c,i)=>c.hard=i>=5);
 let curHole=0,HEDGES=[],BRIDGES=[],holeLenM=0;
 function loadHoleData(i){
   const d=HOLES[i];curHole=i;H=Math.round(d.vert+270);const ty=H-100,Y=t=>ty-t*d.vert;
@@ -398,10 +415,10 @@ $('ver').textContent='v'+VERSION;
 let cw=0,ch=0,dpr=1,scale=1,camX=0,camY=0,overview=false;
 const ZV=.6;
 let ball,strokes,state,last,prev=null,drag=null,parts=[],tNow=0,wetT=0,best=null;
-let set={w:false,sl:true},windAng=0,windMag=0,introT=0,scores=Array(18).fill(null),allScores=[0,1,2,3,4].map(()=>Array(18).fill(null));try{const j=JSON.parse(localStorage.getItem('fodboldgolf_set'));if(j)set=Object.assign(set,j)}catch(e){}set.w=!!set.w;
+let set={w:false,sl:true},windAng=0,windMag=0,introT=0,scores=Array(18).fill(null),allScores=Array.from({length:10},()=>Array(18).fill(null));try{const j=JSON.parse(localStorage.getItem('fodboldgolf_set'));if(j)set=Object.assign(set,j)}catch(e){}set.w=!!set.w;
 let sq=0,trail=[],confetti=[],banner=null,zoomK=0,flagShake=0,sink={t:0,x0:0,y0:0};const fx={t:-1};
 let savedCur=0,savedCourse=0,bests={};
-try{const j=JSON.parse(localStorage.getItem('fodboldgolf_round2'));if(j&&Array.isArray(j.all)){j.all.forEach((a,c)=>{if(c<5&&Array.isArray(a))allScores[c]=a.slice(0,18).concat(Array(18).fill(null)).slice(0,18)});savedCourse=Math.max(0,Math.min(4,j.course|0));savedCur=Math.max(0,Math.min(17,j.cur|0))}
+try{const j=JSON.parse(localStorage.getItem('fodboldgolf_round2'));if(j&&Array.isArray(j.all)){j.all.forEach((a,c)=>{if(c<10&&Array.isArray(a))allScores[c]=a.slice(0,18).concat(Array(18).fill(null)).slice(0,18)});savedCourse=Math.max(0,Math.min(9,j.course|0));savedCur=Math.max(0,Math.min(17,j.cur|0))}
   else{const o=JSON.parse(localStorage.getItem('fodboldgolf_round'));if(o&&Array.isArray(o.scores)){allScores[0]=o.scores.slice(0,18).concat(Array(18).fill(null)).slice(0,18);savedCur=Math.max(0,Math.min(17,o.cur|0))}}}catch(e){}
 try{bests=JSON.parse(localStorage.getItem('fodboldgolf_bests'))||{}}catch(e){}
 function saveRound(){try{localStorage.setItem('fodboldgolf_round2',JSON.stringify({all:allScores,course:curCourse,cur:curHole}))}catch(e){}}
@@ -698,14 +715,15 @@ function showCard(fin){
     h+='<tr'+(i===curHole&&!fin?' class="cur"':'')+'><td>'+(i+1)+'</td><td>'+HOLES[i].n+'</td><td>'+p+'</td><td>'+(sc!=null?sc:'–')+'</td><td>'+(sc!=null?fmtPar(sc-p):'')+'</td></tr>'}
   h+='<tr class="tot"><td></td><td>I alt</td><td>'+pp+'</td><td>'+(n?ts:'–')+'</td><td>'+(n?fmtPar(tp):'')+'</td></tr></table>';
   if(n===18&&bests[curCourse])h+='<p style="margin:8px 0 0;font-size:13px">Bedste runde: '+bests[curCourse]+' slag</p>';
-  $('cardBody').innerHTML=h;$('cardNew').style.display=n?'inline-block':'none';$('cardNext').style.display=n===18&&curCourse<4?'inline-block':'none';$('cardTitle').textContent='Pointkort · '+COURSES[curCourse].name;$('card').style.display='flex';
+  $('cardBody').innerHTML=h;$('cardNew').style.display=n?'inline-block':'none';$('cardNext').style.display=n===18&&curCourse<COURSES.length-1?'inline-block':'none';$('cardTitle').textContent='Pointkort · '+COURSES[curCourse].name;$('card').style.display='flex';
 }
 $('bCard').onclick=()=>{$('settings').style.display='none';showCard()};
 $('eC').onclick=()=>showCard(curHole===17);
 $('cardClose').onclick=()=>{$('card').style.display='none'};
 function openMain(){
   const L=$('courseList');L.innerHTML='';
-  COURSES.forEach((c,k)=>{const sc=allScores[k],n=sc.filter(v=>v!=null).length,tp=sc.reduce((a,v,i)=>v!=null?a+v-c.holes[i].par:a,0),pars=c.holes.reduce((a,h)=>a+h.par,0);
+  COURSES.forEach((c,k)=>{if(k===0||k===5){const hh=document.createElement('div');hh.style.cssText='margin:14px 0 4px;font-weight:800;font-size:13px;letter-spacing:1px;opacity:.85;width:min(100%,420px)';hh.textContent=k?'🔥 SVÆRE BANER · smalle fairways, flere forhindringer':'KLASSISKE BANER';L.appendChild(hh)}
+    const sc=allScores[k],n=sc.filter(v=>v!=null).length,tp=sc.reduce((a,v,i)=>v!=null?a+v-c.holes[i].par:a,0),pars=c.holes.reduce((a,h)=>a+h.par,0);
     const b=document.createElement('button');b.className='cc';
     b.innerHTML='<span class="sw" style="background:linear-gradient('+c.th.fw+','+c.th.rough+')"></span><span><b>'+c.name+'</b><small>18 huller · par '+pars+(n?' · '+n+'/18 spillet'+(n===18?' · '+(bests[k]?'bedste '+bests[k]:'færdig'):' · '+fmtPar(tp)):'')+'</small></span><span class="go">'+(n===18?'Spil igen':n?'Fortsæt':'Start')+'</span>';
     b.onclick=()=>{$('main').style.display='none';if(n===18){allScores[k]=Array(18).fill(null)}
