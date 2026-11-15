@@ -80,7 +80,7 @@
 <div id="settings"><div class="box"><h3>Indstillinger <small id="ver" style="font-weight:400;opacity:.5;font-size:12px"></small></h3>
   <div class="row"><div class="lbl">Slagspredning (underlag, træfsikkerhed og mishit)</div><div class="seg"><button id="rlTog"></button></div></div>
   <div class="row"><div class="lbl">Vind (styrke og retning er tilfældig på hvert hul)</div><div class="seg"><button id="wTog"></button></div></div>
-  <div class="row"><div class="lbl">Hældning (pile viser hvor bolden ruller hen)</div><div class="seg"><button id="slBtn"></button></div></div>
+  <div class="row"><div class="lbl">Hældning (prikker løber ned ad skråningen, når du sigter)</div><div class="seg"><button id="slBtn"></button></div></div>
   <div class="row"><div class="lbl">Bane</div><div class="seg" id="courseBtns"></div></div>
   <div class="row"><div class="lbl">Hop til hul</div><div class="holeGrid" id="holeGrid"></div></div>
   <div class="row seg"><button id="bCard">Pointkort</button><button id="bNewRound">Ny runde</button></div>
@@ -92,7 +92,7 @@
 <div id="card"><div class="box"><h3 style="margin:0 0 8px" id="cardTitle">Pointkort</h3><div id="cardBody"></div><button id="cardClose">Luk</button><button id="cardNew" style="display:none">Ny runde</button><button id="cardNext" style="display:none">Næste bane</button></div></div>
 <script>
 'use strict';
-const VERSION='1.3';
+const VERSION='1.4';
 //<PHYS>
 let W=600,H=1800;const G=900,BR=7;
 let HOLE={x:400,y:170,r:14},TEE={x:300,y:1700},FW=[[300,1700],[300,200]],FWW=78,GREEN={x:400,y:190,r:78};
@@ -493,11 +493,18 @@ function buildStatic(){
   // tee
   c.fillStyle='#86d65e';c.beginPath();c.roundRect(TEE.x-34,TEE.y-18,68,40,6);c.fill();c.strokeStyle='rgba(255,255,255,.55)';c.lineWidth=1.5;c.stroke();
   for(const sx of[-26,26]){c.fillStyle='rgba(0,0,0,.25)';c.beginPath();c.ellipse(TEE.x+sx+3,TEE.y+3,5,3,0,0,7);c.fill();c.fillStyle='#e23b2e';c.beginPath();c.arc(TEE.x+sx,TEE.y-1,4.5,0,7);c.fill();c.fillStyle='rgba(255,255,255,.6)';c.beginPath();c.arc(TEE.x+sx-1.5,TEE.y-2.5,1.5,0,7);c.fill()}
-  // bakker og lavninger: lys fra øverst til venstre, skygge nederst til højre + højdekurver
-  for(const m of MOUNDS){const R=m.s*2.1,A=Math.abs(m.a),sg=m.a>=0?1:-1;
-    let g=c.createRadialGradient(m.x+sg*m.s*.55,m.y+sg*m.s*.6,m.s*.2,m.x+sg*m.s*.3,m.y+sg*m.s*.35,R);g.addColorStop(0,'rgba('+(sg>0?'10,45,10,':'235,255,190,')+(.42*A)+')');g.addColorStop(1,'rgba('+(sg>0?'10,45,10,':'235,255,190,')+'0)');c.fillStyle=g;c.beginPath();c.arc(m.x,m.y,R,0,7);c.fill();
-    g=c.createRadialGradient(m.x-sg*m.s*.4,m.y-sg*m.s*.45,0,m.x-sg*m.s*.2,m.y-sg*m.s*.25,m.s*1.25);g.addColorStop(0,'rgba('+(sg>0?'235,255,190,':'10,45,10,')+(.5*A)+')');g.addColorStop(1,'rgba('+(sg>0?'235,255,190,':'10,45,10,')+'0)');c.fillStyle=g;c.beginPath();c.arc(m.x,m.y,R,0,7);c.fill();
-    for(const k of[.55,1,1.5]){c.beginPath();c.ellipse(m.x,m.y,m.s*k,m.s*k*.92,0,0,7);c.strokeStyle='rgba(20,70,15,'+(sg>0?.13:.1)+')';c.setLineDash(sg>0?[]:[4,4]);c.lineWidth=1;c.stroke();c.setLineDash([])}}
+  // bakker og lavninger: terrænskygge (lys fra øverst til venstre), toner og svage højdekurver
+  {const seen=new Set(),CS=3;
+   const hAt=(x,y)=>{let h=0;for(const m of MOUNDS){const dx=x-m.x,dy=y-m.y;h+=m.a*Math.exp(-(dx*dx+dy*dy)/(2*m.s*m.s))}return h};
+   for(const m of MOUNDS){const R=m.s*2.6;
+    for(let y=Math.floor((m.y-R)/CS)*CS;y<m.y+R;y+=CS)for(let x=Math.floor((m.x-R)/CS)*CS;x<m.x+R;x+=CS){
+      if(x<8||y<8||x>W-8||y>H-8)continue;const key=x*7919+y*104729;if(seen.has(key))continue;seen.add(key);
+      const g=grad(x+CS/2,y+CS/2),sh=(g[0]+g[1])*.7*26,h=hAt(x+CS/2,y+CS/2);
+      if(Math.abs(sh)>.015){c.fillStyle=sh>0?'rgba(255,255,205,'+Math.min(.5,sh*.9)+')':'rgba(5,35,15,'+Math.min(.55,-sh*1.05)+')';c.fillRect(x,y,CS,CS)}
+      if(h<-.08){c.fillStyle='rgba(10,50,70,'+Math.min(.22,-h*.3)+')';c.fillRect(x,y,CS,CS)}
+      else if(h>.1){c.fillStyle='rgba(255,255,170,'+Math.min(.16,h*.18)+')';c.fillRect(x,y,CS,CS)}}}
+   for(const m of MOUNDS){const sg=m.a>=0?1:-1;
+    for(const k of[.55,1,1.5]){c.beginPath();c.ellipse(m.x,m.y,m.s*k,m.s*k*.92,0,0,7);c.strokeStyle='rgba(20,70,15,'+(sg>0?.11:.09)+')';c.setLineDash(sg>0?[]:[4,4]);c.lineWidth=1;c.stroke();c.setLineDash([])}}}
   // vand (flere overlappende ellipser giver åer og ringe)
   for(const w of WATER){ell(c,w,9);c.fillStyle='#2a5a22';c.fill()}
   for(const w of WATER){ell(c,w,5);c.fillStyle='#8a7a4a';c.fill()}
@@ -762,15 +769,19 @@ $('cardNext').onclick=()=>{$('card').style.display='none';$('end').style.display
 $('cardNew').onclick=newRound;$('bNewRound').onclick=newRound;
 $('bLob').onclick=()=>{lobMode=!lobMode;$('bLob').classList.toggle('on',lobMode);toast(lobMode?'Lob: højt og kort':'Normalt spark')};
 syncSet();
-function drawSlopes(x0,y0,vw,vh){
-  if(!set.sl||state==='sunk'||state==='sink')return;
-  const sp=30,ph=(tNow*.55)%1;cx.lineCap='round';cx.lineWidth=1.6;
-  for(let y=Math.floor(y0/sp)*sp;y<y0+vh+sp;y+=sp)for(let x=Math.floor(x0/sp)*sp;x<x0+vw+sp;x+=sp){
-    if(x<10||x>W-10||y<10||y>H-10)continue;
-    const g=grad(x,y),mg=Math.hypot(g[0],g[1]),k=Math.min(1,mg*SLOPE_K/70);if(k<.1||surfAt(x,y)==='water')continue;
-    const dx=-g[0]/mg,dy=-g[1]/mg,L=7+9*k,p=(ph+((x*.013+y*.021)%1))%1,mx=x+dx*(p-.5)*L*1.4,my=y+dy*(p-.5)*L*1.4,al=Math.sin(p*Math.PI)*(.25+.5*k);
-    cx.strokeStyle='rgba(255,255,255,'+al+')';cx.beginPath();cx.moveTo(mx-dx*L*.5,my-dy*L*.5);cx.lineTo(mx+dx*L*.5,my+dy*L*.5);
-    cx.moveTo(mx+dx*L*.5-dx*3.5-dy*2.6,my+dy*L*.5-dy*3.5+dx*2.6);cx.lineTo(mx+dx*L*.5,my+dy*L*.5);cx.lineTo(mx+dx*L*.5-dx*3.5+dy*2.6,my+dy*L*.5-dy*3.5-dx*2.6);cx.stroke()}
+let flow=[],flowA=0;
+function drawSlopes(x0,y0,vw,vh,dt){
+  const on=set.sl&&drag&&state==='aim';flowA+=((on?1:0)-flowA)*Math.min(1,dt*(on?6:5));
+  if(flowA<.02){flow.length=0;return}
+  if(on&&flow.length<90){const cs=[[ball.x,ball.y,120]];if(Math.hypot(HOLE.x-ball.x,HOLE.y-ball.y)<520)cs.push([HOLE.x,HOLE.y,95]);
+    for(let n=0;n<3;n++){const c=cs[(Math.random()*cs.length)|0],a=Math.random()*6.283,r=Math.sqrt(Math.random())*c[2],x=c[0]+Math.cos(a)*r,y=c[1]+Math.sin(a)*r;
+      if(x<10||x>W-10||y<10||y>H-10||surfAt(x,y)==='water')continue;const g=grad(x,y),mg=Math.hypot(g[0],g[1]);if(mg*SLOPE_K<14)continue;flow.push({x,y,l:0,m:1.3+Math.random()*.8})}}
+  cx.lineCap='round';cx.lineWidth=2;
+  for(const p of flow){const g=grad(p.x,p.y),mg=Math.hypot(g[0],g[1]),v=Math.min(95,mg*SLOPE_K*.75),dx=mg>1e-6?-g[0]/mg:0,dy=mg>1e-6?-g[1]/mg:0;
+    p.x+=dx*v*dt;p.y+=dy*v*dt;p.l+=dt;const f=p.l/p.m,al=Math.sin(Math.min(1,f)*Math.PI)*Math.min(.85,.25+v/90)*flowA,L=2+v*.09;
+    cx.strokeStyle='rgba(255,255,255,'+al+')';cx.beginPath();cx.moveTo(p.x,p.y);cx.lineTo(p.x-dx*L,p.y-dy*L);cx.stroke();
+    cx.fillStyle='rgba(255,255,255,'+al+')';cx.beginPath();cx.arc(p.x,p.y,1.6,0,7);cx.fill()}
+  flow=flow.filter(p=>p.l<p.m&&p.x>8&&p.x<W-8&&p.y>8&&p.y<H-8)
 }
 const WS=(()=>{const r=rnd(77),a=[];for(let i=0;i<18;i++)a.push([r(),r(),r()]);return a})();
 function drawWindStreaks(){
@@ -883,7 +894,7 @@ function frame(ts){
   if(zoomK>.002&&!overview){const ccx=ox+cw/s/2,ccy=oy+ch/s/2,tx=ccx+(HOLE.x+10-ccx)*zoomK,ty=ccy+(HOLE.y-14-ccy)*zoomK;s*=1+.55*zoomK;ox=tx-cw/s/2;oy=ty-ch/s/2}
   cx.setTransform(dpr,0,0,dpr,0,0);cx.fillStyle='#2c5f20';cx.fillRect(0,0,cw,ch);
   cx.setTransform(dpr*s,0,0,dpr*s,-ox*dpr*s,-oy*dpr*s);
-  cx.drawImage(st,0,0,W,H);drawWater();drawClouds();drawHoleFx(dt);drawSlopes(ox,oy,cw/s,ch/s);drawTrail(dt);
+  cx.drawImage(st,0,0,W,H);drawWater();drawClouds();drawHoleFx(dt);drawSlopes(ox,oy,cw/s,ch/s,dt);drawTrail(dt);
   const items=[];for(const sg of SEGS){if(sg.type==='log')items.push([sg.y1,()=>drawLog(sg)]);else if(sg.type==='wall')items.push([sg.y1,()=>drawWall(sg)])}
   for(const h of HEDGES)items.push([h.y,()=>drawHedge(h)]);for(const t of TREES)if(t.y>oy-70&&t.y<oy+ch/s+70)items.push([t.y,()=>drawTree(t)]);items.push([HOLE.y+.5,drawFlag]);
   const high=ball.z>60;const hid=state==='sink'||state==='sunk';if(state!=='wet'){if(!hid)drawBallShadow();if(!high)items.push([ball.y,drawBall])}
